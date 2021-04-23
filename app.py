@@ -114,7 +114,7 @@ def main():
             image_label.after(delay, lambda: stream(scale))
 
     root = Tk()
-    root.title('ASCII Streamer')
+    root.title('ASCII Vision')
     f1 = Frame()
     image_label = Label(f1, borderwidth=5, relief='solid')
     ascii_label = Label(f1, font=('courier', 2), fg=FONT_COLOR, bg=BACKGROUND_COLOR, borderwidth=5, relief='solid')
