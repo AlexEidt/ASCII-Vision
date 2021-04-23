@@ -8,11 +8,11 @@ Convert video/webcam streams into high resolution ASCII streams with other optio
 
 ## Demo
 
-### Original
+### Original Video
 
 <img src="Documentation/fireworks.gif" alt="Original Fireworks">
 
-### ASCII (Mirrored)
+### ASCII Video (Mirrored)
 
 <img src="Documentation/ASCII.gif" alt="Fireworks with ASCII Filter">
 
