@@ -8,9 +8,13 @@ Convert video/webcam streams into high resolution ASCII streams with other optio
 
 ## Demo
 
-Original | ASCII (Mirrored)
---- | ---
-<img src="Documentation/fireworks.gif" alt="Original Fireworks"> | <img src="Documentation/ASCII.gif" alt="Fireworks with ASCII Filter">
+### Original
+
+<img src="Documentation/fireworks.gif" alt="Original Fireworks">
+
+### ASCII
+
+<img src="Documentation/ASCII.gif" alt="Fireworks with ASCII Filter">
 
 ## Filters
 
@@ -53,7 +57,7 @@ to the file name/path of the video file you want to stream.
 
 ## Usage
 
-Before you begin you'll need to compile `process_image.c` into a shared object file.
+Before you begin you'll need to compile `process_image.c` into a shared object file. **If you're running 32-bit Python, use a C compiler that compiles to 32-bit. If you're running 64-bit Python, use a C compiler that compiles to 64-bit. If you don't do this, you'll get an error saying your .so file can't be found**.
 
 ```
 gcc -fPIC -shared -o process_image.so process_image.c
