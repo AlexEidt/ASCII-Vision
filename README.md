@@ -12,7 +12,7 @@ Convert video/webcam streams into high resolution ASCII streams with other optio
 
 <img src="Documentation/fireworks.gif" alt="Original Fireworks">
 
-### ASCII
+### ASCII (Mirrored)
 
 <img src="Documentation/ASCII.gif" alt="Fireworks with ASCII Filter">
 
