@@ -1,4 +1,4 @@
-# ASCII Streamer
+# ASCII Vision
 
 Convert video/webcam streams into high resolution ASCII streams with other optional video effects.
 
