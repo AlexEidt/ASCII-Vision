@@ -1,0 +1,12 @@
+# Shared output file
+*.so
+
+# VS Code settings folder
+/.vscode
+
+# Documentation Video Files
+*.mp4
+
+# Extra Demo GIFs
+App-Demo-1.gif
+ASCII-1.gif
