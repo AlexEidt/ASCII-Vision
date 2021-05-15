@@ -238,14 +238,11 @@ void sobel_color(uint8_t* input, uint8_t* output, int w, int h) {
             int h2 = -input[imw - 1] - 2 * input[imw] - input[imw + 1];
             h1 += 2 * input[i - 1] - 2 * input[i + 1] + input[ipw - 1] - input[ipw + 1];
             h2 += input[ipw - 1] + 2 * input[ipw] + input[ipw + 1];
-            // Phase
-            //output[index++] = 0;
             // Magnitude
             uint8_t magnitude = isqrt(h1 * h1 + h2 * h2);
             output[index++] = magnitude;
             output[index++] = magnitude;
-            //output[index++] = magnitude;
-            
+            // Phase
             output[index] = (int) (atan2f(h2, h1)) * magnitude;
             if (output[index] > RGB_MAX) output[index] = RGB_MAX;
             else if (output[index] < 0) output[index] = 0;
