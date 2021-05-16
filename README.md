@@ -22,7 +22,7 @@ There are several filters to apply to the video stream, all done using convoluti
 
 ## Options
 
-While the ASCII Streamer will default to displaying your webcam feed, it can also display video from other sources as well as video files. Go to lines 22 - 29 in `app.py` to see all the options:
+While the ASCII Streamer will default to displaying your webcam feed, it can also display video from other sources as well as video files. Go to lines 24 - 31 in `app.py` to see all the options:
 
 ```python
 # Mirror image stream along vertical axis.
@@ -37,7 +37,7 @@ FONT_COLOR = 'black'
 
 ### Video from Other Sources
 
-If you want to stream video from something other than your webcam, go down to line 25 in `app.py`
+If you want to stream video from something other than your webcam, go down to line 27 in `app.py`
 
 ```python
 STREAM = '<video0>'
@@ -47,7 +47,7 @@ and change the `0` in `'<video0>'` to some integer. It will usually be 1, but if
 
 ### Video Files
 
-If you want to play video files as the stream, go to line 25 in `app.py` and change `'<video0>'` in
+If you want to play video files as the stream, go to line 27 in `app.py` and change `'<video0>'` in
 
 ```python
 STREAM = '<video0>'
@@ -77,16 +77,18 @@ python app.py
 
 ## Resizing the ASCII Video Stream
 
-If you want to resize the ASCII stream, go to lines 103 - 105 in `app.py` and modify line 104 as shown below.
+If you want to resize the ASCII stream, go to lines 129 - 132 in `app.py` and modify line 130 as shown below.
 
 ```python
 ascii_label.config(
-    text='\n'.join([''.join(x) for x in char_mapper(output).reshape((h, w))])
+    text='\n'.join((''.join(x) for x in char_mapper(output).reshape((h, w)))),
+    font=('courier', scaled_blocks * 9 // 4 if set_scaled else 2)
 )
 
 n = 3
 ascii_label.config(
-    text='\n'.join([''.join(x) for i, x in enumerate(char_mapper(output).reshape((h, w))) if i % n])
+    text='\n'.join((''.join(x) for i, x in enumerate(char_mapper(output).reshape((h, w))) if i % n)),
+    font=('courier', scaled_blocks * 9 // 4 if set_scaled else 2)
 )
 ```
 
