@@ -23,6 +23,7 @@ ASCII = 0
 FILTER = 0
 BLOCKS = 0
 
+
 def update():
     """
     Update settings based on user input.
@@ -45,7 +46,7 @@ def update():
     elif keyboard.is_pressed('space'):  # No Filter
         FILTER = 0
 
-    for i in range(0, 10):
+    for i in range(10):
         if keyboard.is_pressed(str(i)):
             BLOCKS = i
             break
@@ -116,7 +117,7 @@ def main():
         h, w, c = image.shape
 
         # ASCII image is larger than regular, so multiply scaling factor by 2 if ASCII mode is on.
-        size = scale << 1 if ASCII else scale
+        size = scale << 1 if ASCII and not COLOR else scale
         h //= size
         w //= size
 
@@ -189,7 +190,7 @@ def main():
     if scale is None:
         raise ValueError('Could not find rescaling factor for video/webcam stream.')
 
-    TILES = tile_tuples(w // scale, h // scale)
+    TILES = tile_tuples(w // (scale * 2), h // (scale * 2))
 
     stream(scale)
     root.mainloop()
