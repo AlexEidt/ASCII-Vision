@@ -41,7 +41,7 @@ FONT_COLOR = 'black'
 
 ### Video from Other Sources
 
-If you want to stream video from something other than your webcam, go down to line 27 in `app.py`
+If you want to stream video from something other than your webcam, go down to `STREAM` in `app.py`
 
 ```python
 STREAM = '<video0>'
