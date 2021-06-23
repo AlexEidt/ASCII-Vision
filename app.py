@@ -101,7 +101,7 @@ def convolve(frame, kernel):
 
 def main():
     # All ASCII characters used in the images sorted by pixel density.
-    chars = f""" `.,|^'\/~!_-;:)("><¬?*+7j1ilJyc&vt0$VruoI=wzCnY32LTxs4Zkm5hg6qfU9paOS#£eX8D%bdRPGFK@AMQNWHEB"""
+    chars = f""" `.,|^'\/~!_-;:)("><¬?*+7j1ilJyc&vt0$VruoI=wzCnY32LTxs4Zkm5hg6qfU9paOS#£eX8D%bdRPGFK@AMQNWHEB"""[::-1]
     char_mapper = np.vectorize(lambda x: chars[x])
 
     def stream(scale):
@@ -153,7 +153,7 @@ def main():
         if ASCII and not COLOR:
             num_chars = len(chars) - 1
             image = np.delete(image, [i for i in range(h) if not i % 4], axis=0)
-            image = num_chars - ((image.astype(np.int) * num_chars) // 255)
+            image = (image.astype(np.int) * num_chars) // 255
             image_label.pack_forget()
             ascii_label.pack()
             # Update label with new ASCII image.
