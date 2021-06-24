@@ -1,11 +1,10 @@
 # Alex Eidt
 
-from tkinter import *
-from tkinter.ttk import Style
+import tkinter as tk
 import imageio
-import os
 import numpy as np
 import keyboard
+from tkinter.ttk import Style
 from PIL import Image, ImageTk
 
 
@@ -30,20 +29,20 @@ def update():
     """
     global COLOR, ASCII, FILTER, BLOCKS
 
-    if keyboard.is_pressed('shift+g'):  # Color/Grayscale Mode
+    if keyboard.is_pressed('shift+g'):  # Color/Grayscale Mode.
         COLOR = 1
     elif keyboard.is_pressed('g'):
         COLOR = 0
-    if keyboard.is_pressed('shift+a'):  # ASCII Mode
+    if keyboard.is_pressed('shift+a'):  # ASCII Mode.
         ASCII = 0
     elif keyboard.is_pressed('a'):
         ASCII = 1
 
-    if keyboard.is_pressed('o'):        # Outline Filter
+    if keyboard.is_pressed('o'):        # Outline Filter.
         FILTER = 1
-    elif keyboard.is_pressed('s'):      # Sobel Filter 
+    elif keyboard.is_pressed('s'):      # Sobel Filter.
         FILTER = 2
-    elif keyboard.is_pressed('space'):  # No Filter
+    elif keyboard.is_pressed('space'):  # No Filter.
         FILTER = 0
 
     for i in range(10):
@@ -56,7 +55,7 @@ def get_dims(w, h, factor):
     """
     Finds the optimal resizing factor for the webcam stream based on the screen dimensions.
     """
-    root = Tk()
+    root = tk.Tk()
     # Get screen size
     height = root.winfo_screenheight() / factor
     width = root.winfo_screenwidth() / factor
@@ -121,15 +120,16 @@ def main():
         h //= size
         w //= size
 
-        # Resize Image
+        # Resize Image.
         image = image[::size, ::size]
-        if not COLOR: # Grayscale Image
+        if not COLOR: # Grayscale Image.
             image = np.sum(image * np.array([0.299, 0.587, 0.114]), axis=2, dtype=np.uint8)
-        if MIRROR: # Mirror Image along vertical axis
+        if MIRROR: # Mirror Image along vertical axis.
             image = np.fliplr(image)
 
+        # Tile Image into dw x dh blocks for resized ASCII streams.
         if BLOCKS > 0 and not COLOR and ASCII:
-            dw, dh = TILES[BLOCKS]
+            dw, dh = TILES[min(BLOCKS, len(TILES) - 1)]
             image = (np.add.reduceat(
                 np.add.reduceat(image.astype(np.int), np.arange(0, h, dh), axis=0),
                 np.arange(0, w, dw),
@@ -137,13 +137,14 @@ def main():
             ) / (dw * dh)).astype(np.uint8)
             h, w = image.shape
 
+        # Apply image convolutions to stream.
         if FILTER > 0 and not COLOR:
-            if FILTER == 1:     # Outline Kernel
+            if FILTER == 1:     # Outline Kernel.
                 image = convolve(
                     image,
                     np.array([[-1, -1, -1], [-1, -8, -1], [-1, -1, -1]])
                 ).astype(np.uint8)
-            elif FILTER == 2:   # Sobel Kernel
+            elif FILTER == 2:   # Sobel Kernel.
                 gx = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
                 gy = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
                 image = np.hypot(convolve(image, gx), convolve(image, gy)).astype(np.uint8)
@@ -165,27 +166,26 @@ def main():
         else:
             ascii_label.pack_forget()
             image_label.pack()
-            frame_image = Image.fromarray(image)
-            frame_image = ImageTk.PhotoImage(frame_image)
+            frame_image = ImageTk.PhotoImage(Image.fromarray(image))
             image_label.config(image=frame_image)
             image_label.image = frame_image
             image_label.after(delay, lambda: stream(scale))
 
     # Set up window.
-    root = Tk()
+    root = tk.Tk()
     root.title('ASCII Streamer')
-    f1 = Frame()
-    image_label = Label(f1, borderwidth=5, relief='solid')
-    ascii_label = Label(f1, font=('courier', 2), fg=FONT_COLOR, bg=BACKGROUND_COLOR, borderwidth=5, relief='solid')
-    f1.pack(side=LEFT, expand=YES, padx=10)
+    mainframe = tk.Frame()
+    image_label = tk.Label(mainframe, borderwidth=5, relief='solid')
+    ascii_label = tk.Label(mainframe, font=('courier', 2), fg=FONT_COLOR, bg=BACKGROUND_COLOR, borderwidth=5, relief='solid')
+    mainframe.pack(side=tk.LEFT, expand=tk.YES, padx=10)
     root.protocol("WM_DELETE_WINDOW", lambda: (video.close(), root.destroy()))
 
     # Get image stream from webcam or other source and begin streaming.
     video = imageio.get_reader(STREAM)
     meta_data = video.get_meta_data()
     # To change the framerate of the stream, change the "delay" value below.
-    delay = int(meta_data['fps'])
-    h, w, _ = video.get_next_data().shape
+    delay = int(1000 / meta_data['fps'])
+    w, h = meta_data['source_size']
     scale = get_dims(w, h, 2)
     if scale is None:
         raise ValueError('Could not find rescaling factor for video/webcam stream.')
