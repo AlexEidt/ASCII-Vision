@@ -184,7 +184,7 @@ def main():
     video = imageio.get_reader(STREAM)
     meta_data = video.get_meta_data()
     # To change the framerate of the stream, change the "delay" value below.
-    delay = int(1000 / meta_data['fps'])
+    delay = 10 # int(meta_data['fps'])
     w, h = meta_data['source_size']
     scale = get_dims(w, h, 2)
     if scale is None:
