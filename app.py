@@ -16,10 +16,13 @@ STREAM = '<video0>'
 BACKGROUND_COLOR = 'white'
 # Font color used in the ASCII stream. Make sure there's some contrast between the two.
 FONT_COLOR = 'black'
-# Font size to use with colored ASCII
+# Font size to use with colored/grayscaled ASCII
 FONTSIZE = 12
-# Boldness to use for ASCII characters with colored ASCII
+# Boldness to use with colored/grayscaled ASCII
 BOLDNESS = 1
+# Factor to divide image height and width by. 1 For for original size, 2 for half size, etc...
+FACTOR = 2
+
 
 COLOR = 1
 ASCII = 0
@@ -127,7 +130,7 @@ def main():
     for fontsize in [5, 10, 15, 20, 30, 45, 60, 85, 100]:
         font_maps.append(get_font_maps(fontsize, BOLDNESS, chars))
 
-    def stream(scale):
+    def stream():
         try:
             image = video.get_next_data()
         except Exception:
@@ -139,8 +142,8 @@ def main():
 
         h, w, c = image.shape
 
-        # ASCII image is larger than regular, so multiply scaling factor by 2 if ASCII mode is on.
-        size = scale << 2 if TEXT else scale
+        # Text image is larger than regular, so multiply scaling factor by 2 if Text mode is on.
+        size = FACTOR << 1 if TEXT else FACTOR
         h //= size
         w //= size
 
@@ -217,14 +220,14 @@ def main():
                 text='\n'.join((''.join(x) for x in char_mapper(image))),
                 font=('courier', (BLOCKS * 4) + 2)
             )
-            ascii_label.after(delay, lambda: stream(scale))
+            ascii_label.after(delay, lambda: stream())
         else:
             ascii_label.pack_forget()
             image_label.pack()
             frame_image = ImageTk.PhotoImage(Image.fromarray(image))
             image_label.config(image=frame_image)
             image_label.image = frame_image
-            image_label.after(delay, lambda: stream(scale))
+            image_label.after(delay, lambda: stream())
 
     # Set up window.
     root = tk.Tk()
@@ -244,7 +247,7 @@ def main():
 
     tiles = tile_tuples(w, h)
 
-    stream(1)
+    stream()
     root.state('zoomed')
     root.mainloop()
 
