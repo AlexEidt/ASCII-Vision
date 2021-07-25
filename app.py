@@ -5,7 +5,7 @@ import imageio
 import numpy as np
 import keyboard
 from tkinter.ttk import Style
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageFont, ImageDraw
 
 
 # Mirror image stream along vertical axis.
@@ -16,18 +16,55 @@ STREAM = '<video0>'
 BACKGROUND_COLOR = 'white'
 # Font color used in the ASCII stream. Make sure there's some contrast between the two.
 FONT_COLOR = 'black'
+# Font size to use with colored ASCII
+FONTSIZE = 12
+# Boldness to use for ASCII characters with colored ASCII
+BOLDNESS = 1
 
 COLOR = 1
 ASCII = 0
 FILTER = 0
 BLOCKS = 0
+TEXT = 0
+
+
+def get_font_maps(fontsize, boldness, chars):
+    """
+    Returns a list of font bitmaps.
+    Parameters
+        fontsize    - Font size to use for ASCII characters
+        boldness    - Stroke size to use when drawing ASCII characters
+        chars       - ASCII characters to use in media
+    Returns
+        List of font bitmaps corresponding to the order of characters in CHARS
+    """
+    fonts = []
+    widths, heights = set(), set()
+    font = ImageFont.truetype('cour.ttf', size=fontsize)
+    for char in chars:
+        w, h = font.getsize(char)
+        widths.add(w)
+        heights.add(h)
+        image = Image.new("RGB", (w, h), (255, 255, 255))
+        draw = ImageDraw.Draw(image)
+        draw.text(
+            (0, - (fontsize // 6)),
+            char,
+            fill=(0, 0, 0),
+            font=font,
+            stroke_width=boldness
+        )
+        bitmap = np.array(image)[:, :, 0]
+        fonts.append(((255 - bitmap) / 255).astype(np.float32))
+
+    return list(map(lambda x: x[:min(heights), :min(widths)], fonts))
 
 
 def update():
     """
     Update settings based on user input.
     """
-    global COLOR, ASCII, FILTER, BLOCKS
+    global COLOR, ASCII, FILTER, BLOCKS, TEXT
 
     if keyboard.is_pressed('shift+g'):  # Color/Grayscale Mode.
         COLOR = 1
@@ -37,6 +74,10 @@ def update():
         ASCII = 0
     elif keyboard.is_pressed('a'):
         ASCII = 1
+    if keyboard.is_pressed('shift+t'):  # Text Mode.
+        TEXT = 0
+    elif keyboard.is_pressed('t'):
+        TEXT = 1
 
     if keyboard.is_pressed('o'):        # Outline Filter.
         FILTER = 1
@@ -49,26 +90,6 @@ def update():
         if keyboard.is_pressed(str(i)):
             BLOCKS = i
             break
-
-
-def get_dims(w, h, factor):
-    """
-    Finds the optimal resizing factor for the webcam stream based on the screen dimensions.
-    """
-    root = tk.Tk()
-    # Get screen size
-    height = root.winfo_screenheight() / factor
-    width = root.winfo_screenwidth() / factor
-    root.destroy()
-    scale = None
-    max_resolution = 1 << 16
-    for i in range(2, 21):
-        if not (w % i or h % i):
-            max_ = abs(height - h / i) + abs(width - w / i)
-            if max_ < max_resolution:
-                max_resolution = max_
-                scale = i
-    return scale
 
 
 def tile_tuples(w, h):
@@ -102,6 +123,9 @@ def main():
     # All ASCII characters used in the images sorted by pixel density.
     chars = f""" `.,|^'\/~!_-;:)("><¬?*+7j1ilJyc&vt0$VruoI=wzCnY32LTxs4Zkm5hg6qfU9paOS#£eX8D%bdRPGFK@AMQNWHEB"""[::-1]
     char_mapper = np.vectorize(lambda x: chars[x])
+    font_maps = [get_font_maps(FONTSIZE, BOLDNESS, chars)]
+    for fontsize in [5, 10, 15, 20, 30, 45, 60, 85, 100]:
+        font_maps.append(get_font_maps(fontsize, BOLDNESS, chars))
 
     def stream(scale):
         try:
@@ -116,20 +140,20 @@ def main():
         h, w, c = image.shape
 
         # ASCII image is larger than regular, so multiply scaling factor by 2 if ASCII mode is on.
-        size = scale << 1 if ASCII and not COLOR else scale
+        size = scale << 2 if TEXT else scale
         h //= size
         w //= size
 
         # Resize Image.
         image = image[::size, ::size]
-        if not COLOR: # Grayscale Image.
+        if not COLOR or TEXT: # Grayscale Image.
             image = np.sum(image * np.array([0.299, 0.587, 0.114]), axis=2, dtype=np.uint8)
         if MIRROR: # Mirror Image along vertical axis.
             image = np.fliplr(image)
 
         # Tile Image into dw x dh blocks for resized ASCII streams.
-        if BLOCKS > 0 and not COLOR and ASCII:
-            dw, dh = TILES[min(BLOCKS, len(TILES) - 1)]
+        if BLOCKS > 0 and TEXT:
+            dw, dh = tiles[min(BLOCKS, len(tiles) - 1)]
             image = (np.add.reduceat(
                 np.add.reduceat(image.astype(np.int), np.arange(0, h, dh), axis=0),
                 np.arange(0, w, dw),
@@ -138,7 +162,7 @@ def main():
             h, w = image.shape
 
         # Apply image convolutions to stream.
-        if FILTER > 0 and not COLOR:
+        if FILTER > 0 and (not COLOR or TEXT):
             if FILTER == 1:     # Outline Kernel.
                 image = convolve(
                     image,
@@ -149,12 +173,43 @@ def main():
                 gy = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
                 image = np.hypot(convolve(image, gx), convolve(image, gy)).astype(np.uint8)
                 del gx, gy
+        
+        if ASCII and not TEXT:
+            fh, fw = font_maps[BLOCKS][0].shape
+            frame = image[::fh, ::fw]
+            if len(frame.shape) == 3:
+                nh, nw, _ = frame.shape
+            else:
+                nh, nw = frame.shape
+
+            colors = np.repeat(np.repeat(255 - frame, fw, axis=1), fh, axis=0)
+
+            if COLOR:
+                grayscaled = np.sum(
+                    frame * np.array([0.299, 0.587, 0.114]),
+                    axis=2,
+                    dtype=np.uint32
+                ).ravel()
+            else:
+                grayscaled = frame.ravel().astype(np.uint32)
+
+            grayscaled *= (len(chars) - 1)
+            grayscaled //= 255
+
+            # Create a new list with each font bitmap based on the grayscale value
+            image = map(lambda idx: font_maps[BLOCKS][grayscaled[idx]], range(len(grayscaled)))
+            image = np.array(list(image)).reshape((nh, nw, fh, fw)).transpose(0, 2, 1, 3).ravel()
+            if COLOR:
+                image = np.tile(image, 3).reshape((3, nh * fh, nw * fw)).transpose(1, 2, 0)
+            else:
+                image = image.reshape((nh * fh, nw * fw))
+            image = 255 - (image[:h, :w] * colors[:h, :w]).astype(np.uint8)
+
 
         # If ASCII mode is on convert frame to ascii and display, otherwise display video stream.
-        if ASCII and not COLOR:
-            num_chars = len(chars) - 1
+        if TEXT:
             image = np.delete(image, [i for i in range(h) if not i % 4], axis=0)
-            image = (image.astype(np.int) * num_chars) // 255
+            image = (image.astype(np.int) * (len(chars) - 1)) // 255
             image_label.pack_forget()
             ascii_label.pack()
             # Update label with new ASCII image.
@@ -186,13 +241,11 @@ def main():
     # To change the framerate of the stream, change the "delay" value below.
     delay = 10 # int(meta_data['fps'])
     w, h = meta_data['source_size']
-    scale = get_dims(w, h, 2)
-    if scale is None:
-        raise ValueError('Could not find rescaling factor for video/webcam stream.')
 
-    TILES = tile_tuples(w // (scale * 2), h // (scale * 2))
+    tiles = tile_tuples(w, h)
 
-    stream(scale)
+    stream(1)
+    root.state('zoomed')
     root.mainloop()
 
 
