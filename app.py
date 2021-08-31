@@ -21,7 +21,9 @@ FONTSIZE = 12
 # Boldness to use with colored/grayscaled ASCII
 BOLDNESS = 1
 # Factor to divide image height and width by. 1 For for original size, 2 for half size, etc...
-FACTOR = 2
+FACTOR = 1
+# Characters to use in ASCII
+CHARS = "@%#*+=-:. "
 
 
 COLOR = 1
@@ -29,6 +31,7 @@ ASCII = 0
 FILTER = 0
 BLOCKS = 0
 TEXT = 0
+MONO = 0
 
 
 def get_font_maps(fontsize, boldness, chars):
@@ -67,7 +70,7 @@ def update():
     """
     Update settings based on user input.
     """
-    global COLOR, ASCII, FILTER, BLOCKS, TEXT
+    global COLOR, ASCII, FILTER, BLOCKS, TEXT, MONO
 
     if keyboard.is_pressed('shift+g'):  # Color/Grayscale Mode.
         COLOR = 1
@@ -81,6 +84,10 @@ def update():
         TEXT = 0
     elif keyboard.is_pressed('t'):
         TEXT = 1
+    if keyboard.is_pressed('shift+m'):  # Monochromatic Mode.
+        MONO = 0
+    elif keyboard.is_pressed('m'):
+        MONO = 1
 
     if keyboard.is_pressed('o'):        # Outline Filter.
         FILTER = 1
@@ -125,6 +132,7 @@ def convolve(frame, kernel):
 def main():
     # All ASCII characters used in the images sorted by pixel density.
     chars = f""" `.,|^'\/~!_-;:)("><¬?*+7j1ilJyc&vt0$VruoI=wzCnY32LTxs4Zkm5hg6qfU9paOS#£eX8D%bdRPGFK@AMQNWHEB"""[::-1]
+    chars = ''.join(c for c in chars if c in CHARS)
     char_mapper = np.vectorize(lambda x: chars[x])
     font_maps = [get_font_maps(FONTSIZE, BOLDNESS, chars)]
     for fontsize in [5, 10, 15, 20, 30, 45, 60, 85, 100]:
@@ -185,7 +193,8 @@ def main():
             else:
                 nh, nw = frame.shape
 
-            colors = np.repeat(np.repeat(255 - frame, fw, axis=1), fh, axis=0)
+            if not MONO:
+                colors = np.repeat(np.repeat(255 - frame, fw, axis=1), fh, axis=0)
 
             if COLOR:
                 grayscaled = np.sum(
@@ -197,7 +206,7 @@ def main():
                 grayscaled = frame.ravel().astype(np.uint32)
 
             grayscaled *= (len(chars) - 1)
-            grayscaled //= 255
+            grayscaled >>= 8
 
             # Create a new list with each font bitmap based on the grayscale value
             image = map(lambda idx: font_maps[BLOCKS][grayscaled[idx]], range(len(grayscaled)))
@@ -206,7 +215,10 @@ def main():
                 image = np.tile(image, 3).reshape((3, nh * fh, nw * fw)).transpose(1, 2, 0)
             else:
                 image = image.reshape((nh * fh, nw * fw))
-            image = 255 - (image[:h, :w] * colors[:h, :w]).astype(np.uint8)
+            if MONO:
+                image = 255 - (image * 255).astype(np.uint8)
+            else:
+                image = 255 - (image[:h, :w] * colors[:h, :w]).astype(np.uint8)
 
 
         # If ASCII mode is on convert frame to ascii and display, otherwise display video stream.
