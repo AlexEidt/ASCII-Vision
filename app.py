@@ -163,7 +163,7 @@ def main():
 
         h, w, c = image.shape
         # Text image is larger than regular, so multiply scaling factor by 2 if Text mode is on.
-        size = FACTOR // 2 if TEXT else FACTOR
+        size = FACTOR * 2 if TEXT else FACTOR
         h //= size
         w //= size
 
@@ -187,12 +187,11 @@ def main():
         # Apply image convolutions to stream.
         if FILTER > 0 and (not COLOR or TEXT):
             if FILTER == 1:     # Outline Kernel.
-                image = convolve(image, np.array([[-1, -1, -1], [-1, -8, -1], [-1, -1, -1]]))
+                image = convolve(image, np.array([[-1, -1, -1], [-1, -8, -1], [-1, -1, -1]])).astype(np.uint8)
             elif FILTER == 2:   # Sobel Kernel.
                 gx = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
                 gy = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-                image = np.hypot(convolve(image, gx), convolve(image, gy))
-        image = image.astype(np.uint8)
+                image = np.hypot(convolve(image, gx), convolve(image, gy)).astype(np.uint8)
         
         if ASCII and not TEXT:
             fh, fw = font_maps[BLOCKS][0].shape
