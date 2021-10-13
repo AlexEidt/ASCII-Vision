@@ -1,10 +1,10 @@
 # Alex Eidt
 
 import tkinter as tk
+import string
 import imageio
 import numpy as np
 import keyboard
-from tkinter.ttk import Style
 from PIL import Image, ImageTk, ImageFont, ImageDraw
 
 
@@ -16,14 +16,17 @@ STREAM = '<video0>'
 BACKGROUND_COLOR = 'white'
 # Font color used in the ASCII stream. Make sure there's some contrast between the two.
 FONT_COLOR = 'black'
-# Font size to use with colored/grayscaled ASCII
+# Font size to use with colored/grayscaled ASCII.
 FONTSIZE = 12
-# Boldness to use with colored/grayscaled ASCII
+# Boldness to use with colored/grayscaled ASCII.
 BOLDNESS = 1
 # Factor to divide image height and width by. 1 For for original size, 2 for half size, etc...
 FACTOR = 1
-# Characters to use in ASCII
+# Characters to use in ASCII.
 CHARS = "@%#*+=-:. "
+
+# Font to use in ASCII Graphics.
+FONT = 'cour.ttf'
 
 
 COLOR = 1
@@ -47,7 +50,7 @@ def get_font_maps(fontsize, boldness, chars):
     """
     fonts = []
     widths, heights = set(), set()
-    font = ImageFont.truetype('cour.ttf', size=fontsize)
+    font = ImageFont.truetype(FONT, size=fontsize)
     for char in chars:
         w, h = font.getsize(char)
         widths.add(w)
@@ -133,8 +136,7 @@ def convolve(frame, kernel):
 
 def main():
     # All ASCII characters used in the images sorted by pixel density.
-    chars = f""" `.,|^'\/~!_-;:)("><¬?*+7j1ilJyc&vt0$VruoI=wzCnY32LTxs4Zkm5hg6qfU9paOS#£eX8D%bdRPGFK@AMQNWHEB"""[::-1]
-    chars = ''.join(c for c in chars if c in CHARS)
+    chars = ''.join(c for c in string.printable if c in CHARS)
     font_maps = [get_font_maps(FONTSIZE, BOLDNESS, chars)]
     for fontsize in [5, 10, 15, 20, 30, 45, 60, 85, 100]:
         font_maps.append(get_font_maps(fontsize, BOLDNESS, chars))
@@ -161,7 +163,7 @@ def main():
 
         h, w, c = image.shape
         # Text image is larger than regular, so multiply scaling factor by 2 if Text mode is on.
-        size = FACTOR << 1 if TEXT else FACTOR
+        size = FACTOR // 2 if TEXT else FACTOR
         h //= size
         w //= size
 
