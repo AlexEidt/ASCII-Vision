@@ -29,7 +29,7 @@ While the ASCII Streamer will default to displaying your webcam feed, it can als
 ```python
 # Mirror image stream along vertical axis.
 MIRROR = True
-# Video Stream to use. Put filename here if using video file.
+# Video Stream to use.
 STREAM = '<video0>'
 # Background color of the ASCII stream.
 BACKGROUND_COLOR = 'white'

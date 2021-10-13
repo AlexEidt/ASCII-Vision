@@ -10,7 +10,7 @@ from PIL import Image, ImageTk, ImageFont, ImageDraw
 
 # Mirror image stream along vertical axis.
 MIRROR = True
-# Video Stream to use. Put filename here if using video file.
+# Video Stream to use.
 STREAM = '<video0>'
 # Background color of the ASCII stream.
 BACKGROUND_COLOR = 'white'
@@ -32,6 +32,7 @@ FILTER = 0
 BLOCKS = 0
 TEXT = 0
 MONO = 0
+MIRROR = 1
 
 
 def get_font_maps(fontsize, boldness, chars):
@@ -63,7 +64,8 @@ def get_font_maps(fontsize, boldness, chars):
         bitmap = np.array(image)[:, :, 0]
         fonts.append(((255 - bitmap) / 255).astype(np.float32))
 
-    return list(map(lambda x: x[:min(heights), :min(widths)], fonts))
+    fonts = list(map(lambda x: x[:min(heights), :min(widths)], fonts))
+    return sorted(fonts, key=lambda x: x.sum(), reverse=True)
 
 
 def update():
@@ -133,23 +135,31 @@ def main():
     # All ASCII characters used in the images sorted by pixel density.
     chars = f""" `.,|^'\/~!_-;:)("><¬?*+7j1ilJyc&vt0$VruoI=wzCnY32LTxs4Zkm5hg6qfU9paOS#£eX8D%bdRPGFK@AMQNWHEB"""[::-1]
     chars = ''.join(c for c in chars if c in CHARS)
-    char_mapper = np.vectorize(lambda x: chars[x])
     font_maps = [get_font_maps(FONTSIZE, BOLDNESS, chars)]
     for fontsize in [5, 10, 15, 20, 30, 45, 60, 85, 100]:
         font_maps.append(get_font_maps(fontsize, BOLDNESS, chars))
 
-    def stream():
-        try:
-            image = video.get_next_data()
-        except Exception:
-            video.close()
-            return
+    # Set up window.
+    root = tk.Tk()
+    root.title('ASCII Streamer')
+    mainframe = tk.Frame()
+    image_label = tk.Label(mainframe, borderwidth=5, relief='solid')
+    ascii_label = tk.Label(mainframe, font=('courier', 2), fg=FONT_COLOR, bg=BACKGROUND_COLOR, borderwidth=5, relief='solid')
+    mainframe.pack(side=tk.LEFT, expand=tk.YES, padx=10)
+    root.protocol("WM_DELETE_WINDOW", lambda: (video.close(), root.destroy()))
 
+    # Get image stream from webcam or other source and begin streaming.
+    video = imageio.get_reader(STREAM)
+    w, h = video.get_meta_data()['source_size']
+
+    tiles = tile_tuples(w, h)
+
+    def stream():
+        image = video.get_next_data()
         # Update settings based on pressed keys.
         update()
 
         h, w, c = image.shape
-
         # Text image is larger than regular, so multiply scaling factor by 2 if Text mode is on.
         size = FACTOR << 1 if TEXT else FACTOR
         h //= size
@@ -158,7 +168,7 @@ def main():
         # Resize Image.
         image = image[::size, ::size]
         if not COLOR or TEXT: # Grayscale Image.
-            image = np.sum(image * np.array([0.299, 0.587, 0.114]), axis=2, dtype=np.uint8)
+            image = (image * np.array([0.299, 0.587, 0.114])).sum(axis=2, dtype=np.uint8)
         if MIRROR: # Mirror Image along vertical axis.
             image = np.fliplr(image)
 
@@ -175,37 +185,27 @@ def main():
         # Apply image convolutions to stream.
         if FILTER > 0 and (not COLOR or TEXT):
             if FILTER == 1:     # Outline Kernel.
-                image = convolve(
-                    image,
-                    np.array([[-1, -1, -1], [-1, -8, -1], [-1, -1, -1]])
-                ).astype(np.uint8)
+                image = convolve(image, np.array([[-1, -1, -1], [-1, -8, -1], [-1, -1, -1]]))
             elif FILTER == 2:   # Sobel Kernel.
                 gx = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
                 gy = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-                image = np.hypot(convolve(image, gx), convolve(image, gy)).astype(np.uint8)
-                del gx, gy
+                image = np.hypot(convolve(image, gx), convolve(image, gy))
+        image = image.astype(np.uint8)
         
         if ASCII and not TEXT:
             fh, fw = font_maps[BLOCKS][0].shape
             frame = image[::fh, ::fw]
-            if len(frame.shape) == 3:
-                nh, nw, _ = frame.shape
-            else:
-                nh, nw = frame.shape
+            nh, nw = frame.shape[:2]
 
             if not MONO:
                 colors = np.repeat(np.repeat(255 - frame, fw, axis=1), fh, axis=0)
 
             if COLOR:
-                grayscaled = np.sum(
-                    frame * np.array([0.299, 0.587, 0.114]),
-                    axis=2,
-                    dtype=np.uint32
-                ).ravel()
+                grayscaled = (frame * np.array([0.299, 0.587, 0.114])).sum(axis=2, dtype=np.uint32).ravel()
             else:
                 grayscaled = frame.ravel().astype(np.uint32)
 
-            grayscaled *= (len(chars) - 1)
+            grayscaled *= len(chars)
             grayscaled >>= 8
 
             # Create a new list with each font bitmap based on the grayscale value
@@ -220,44 +220,26 @@ def main():
             else:
                 image = 255 - (image[:h, :w] * colors[:h, :w]).astype(np.uint8)
 
-
         # If ASCII mode is on convert frame to ascii and display, otherwise display video stream.
         if TEXT:
             image = np.delete(image, [i for i in range(h) if not i % 4], axis=0)
-            image = (image.astype(np.int) * (len(chars) - 1)) // 255
+            image = (image.astype(np.int) * len(chars)) >> 8
             image_label.pack_forget()
             ascii_label.pack()
             # Update label with new ASCII image.
             ascii_label.config(
-                text='\n'.join((''.join(x) for x in char_mapper(image))),
+                text='\n'.join(''.join(x) for x in np.vectorize(lambda x: chars[x])(image)),
                 font=('courier', (BLOCKS * 4) + 2)
             )
-            ascii_label.after(delay, lambda: stream())
+            ascii_label.after(1, lambda: stream())
         else:
             ascii_label.pack_forget()
             image_label.pack()
             frame_image = ImageTk.PhotoImage(Image.fromarray(image))
             image_label.config(image=frame_image)
             image_label.image = frame_image
-            image_label.after(delay, lambda: stream())
+            image_label.after(1, lambda: stream())
 
-    # Set up window.
-    root = tk.Tk()
-    root.title('ASCII Streamer')
-    mainframe = tk.Frame()
-    image_label = tk.Label(mainframe, borderwidth=5, relief='solid')
-    ascii_label = tk.Label(mainframe, font=('courier', 2), fg=FONT_COLOR, bg=BACKGROUND_COLOR, borderwidth=5, relief='solid')
-    mainframe.pack(side=tk.LEFT, expand=tk.YES, padx=10)
-    root.protocol("WM_DELETE_WINDOW", lambda: (video.close(), root.destroy()))
-
-    # Get image stream from webcam or other source and begin streaming.
-    video = imageio.get_reader(STREAM)
-    meta_data = video.get_meta_data()
-    # To change the framerate of the stream, change the "delay" value below.
-    delay = 10 # int(meta_data['fps'])
-    w, h = meta_data['source_size']
-
-    tiles = tile_tuples(w, h)
 
     stream()
     root.state('zoomed')
