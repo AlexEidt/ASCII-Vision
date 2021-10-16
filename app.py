@@ -172,7 +172,7 @@ def main():
         if not COLOR or TEXT: # Grayscale Image.
             image = (image * np.array([0.299, 0.587, 0.114])).sum(axis=2, dtype=np.uint8)
         if MIRROR: # Mirror Image along vertical axis.
-            image = np.fliplr(image)
+            image = image[:, ::-1]
 
         # Tile Image into dw x dh blocks for resized ASCII streams.
         if BLOCKS > 0 and TEXT:
@@ -210,7 +210,7 @@ def main():
             grayscaled >>= 11 if COLOR else 8
 
             # Create a new list with each font bitmap based on the grayscale value
-            grayscaled = grayscaled[list(range(len(grayscaled)))]
+            grayscaled = grayscaled[range(len(grayscaled))]
             image = font_maps[BLOCKS][grayscaled]
             image = image.reshape((nh, nw, fh, fw)).transpose(0, 2, 1, 3).ravel()
             if COLOR:
@@ -224,8 +224,8 @@ def main():
 
         # If ASCII mode is on convert frame to ascii and display, otherwise display video stream.
         if TEXT:
-            image = image[[i for i in range(h) if not i % 4]]
-            image = image.astype(np.u32int)
+            image = image[[i for i in range(h) if i % 4]]
+            image = image.astype(np.uint32)
             image *= len(chars)
             image >>= 8
             image_label.pack_forget()
