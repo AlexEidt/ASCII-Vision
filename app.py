@@ -137,7 +137,7 @@ def convolve(frame, kernel):
 
 def main():
     # All ASCII characters used in the images sorted by pixel density.
-    chars = ''.join(c for c in string.printable if c in CHARS)
+    chars = np.array(list(''.join(c for c in string.printable if c in CHARS)))
     font_maps = [get_font_maps(FONTSIZE, BOLDNESS, chars)]
     for fontsize in [5, 10, 15, 20, 30, 45, 60, 85, 100]:
         font_maps.append(get_font_maps(fontsize, BOLDNESS, chars))
@@ -236,7 +236,7 @@ def main():
             ascii_label.pack()
             # Update label with new ASCII image.
             ascii_label.config(
-                text='\n'.join(''.join(x) for x in np.vectorize(lambda x: chars[x])(image)),
+                text='\n'.join(''.join(x) for x in chars[image]),
                 font=('courier', (BLOCKS * 4) + 2)
             )
             ascii_label.after(1, stream)
