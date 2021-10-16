@@ -235,14 +235,14 @@ def main():
                 text='\n'.join(''.join(x) for x in np.vectorize(lambda x: chars[x])(image)),
                 font=('courier', (BLOCKS * 4) + 2)
             )
-            ascii_label.after(1, lambda: stream())
+            ascii_label.after(1, stream)
         else:
             ascii_label.pack_forget()
             image_label.pack()
             frame_image = ImageTk.PhotoImage(Image.fromarray(image))
             image_label.config(image=frame_image)
             image_label.image = frame_image
-            image_label.after(1, lambda: stream())
+            image_label.after(1, stream)
 
 
     stream()
