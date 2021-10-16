@@ -50,10 +50,11 @@ FACTOR = 2
 * `imageio-ffmpeg`
 * `PIL`
 * `numpy`
+* `numexpr`
 * `keyboard`
 
 ```
-pip install pillow numpy imageio keyboard
+pip install pillow numpy imageio keyboard numexpr
 pip install --user imageio-ffmpeg
 ```
 

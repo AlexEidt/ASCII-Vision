@@ -4,6 +4,7 @@ import tkinter as tk
 import string
 import imageio
 import numpy as np
+import numexpr as ne
 import keyboard
 from PIL import Image, ImageTk, ImageFont, ImageDraw
 
@@ -218,9 +219,12 @@ def main():
             else:
                 image = image.reshape((nh * fh, nw * fw))
             if MONO:
-                image = 255 - (image * 255).astype(np.uint8)
+                ne.evaluate('255 - (image * 255)', out=image)
+                image = image.astype(np.uint8)
             else:
-                image = 255 - (image[:h, :w] * colors[:h, :w]).astype(np.uint8)
+                image = image[:h, :w]
+                colors = colors[:h, :w]
+                image = ne.evaluate('255 - image * colors').astype(np.uint8)
 
         # If ASCII mode is on convert frame to ascii and display, otherwise display video stream.
         if TEXT:
