@@ -68,7 +68,7 @@ def get_font_maps(fontsize, boldness, chars):
         fonts.append(((255 - bitmap) / 255).astype(np.float32))
 
     fonts = list(map(lambda x: x[:min(heights), :min(widths)], fonts))
-    return sorted(fonts, key=lambda x: x.sum(), reverse=True)
+    return np.array(sorted(fonts, key=lambda x: x.sum(), reverse=True))
 
 
 def update():
@@ -202,16 +202,17 @@ def main():
                 colors = np.repeat(np.repeat(255 - frame, fw, axis=1), fh, axis=0)
 
             if COLOR:
-                grayscaled = (frame * np.array([0.299, 0.587, 0.114])).sum(axis=2, dtype=np.uint32).ravel()
+                grayscaled = (frame * np.array([3, 1, 4])).sum(axis=2, dtype=np.uint32).ravel()
             else:
                 grayscaled = frame.ravel().astype(np.uint32)
 
             grayscaled *= len(chars)
-            grayscaled >>= 8
+            grayscaled >>= 11 if COLOR else 8
 
             # Create a new list with each font bitmap based on the grayscale value
-            image = map(lambda idx: font_maps[BLOCKS][grayscaled[idx]], range(len(grayscaled)))
-            image = np.array(list(image)).reshape((nh, nw, fh, fw)).transpose(0, 2, 1, 3).ravel()
+            grayscaled = grayscaled[list(range(len(grayscaled)))]
+            image = font_maps[BLOCKS][grayscaled]
+            image = image.reshape((nh, nw, fh, fw)).transpose(0, 2, 1, 3).ravel()
             if COLOR:
                 image = np.tile(image, 3).reshape((3, nh * fh, nw * fw)).transpose(1, 2, 0)
             else:
@@ -223,8 +224,10 @@ def main():
 
         # If ASCII mode is on convert frame to ascii and display, otherwise display video stream.
         if TEXT:
-            image = np.delete(image, [i for i in range(h) if not i % 4], axis=0)
-            image = (image.astype(np.int) * len(chars)) >> 8
+            image = image[[i for i in range(h) if not i % 4]]
+            image = image.astype(np.u32int)
+            image *= len(chars)
+            image >>= 8
             image_label.pack_forget()
             ascii_label.pack()
             # Update label with new ASCII image.
