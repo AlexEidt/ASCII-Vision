@@ -203,7 +203,7 @@ def main():
                 colors = np.repeat(np.repeat(255 - frame, fw, axis=1), fh, axis=0)
 
             if COLOR:
-                grayscaled = (frame * np.array([3, 1, 4])).sum(axis=2, dtype=np.uint32).ravel()
+                grayscaled = (frame * np.array([3, 4, 1])).sum(axis=2, dtype=np.uint32).ravel()
             else:
                 grayscaled = frame.ravel().astype(np.uint32)
 
