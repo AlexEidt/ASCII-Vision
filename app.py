@@ -137,7 +137,7 @@ def convolve(frame, kernel):
 
 def main():
     # All ASCII characters used in the images sorted by pixel density.
-    chars = np.array(list(''.join(c for c in string.printable if c in CHARS)))
+    chars = np.array([c for c in string.printable if c in CHARS])
     font_maps = [get_font_maps(FONTSIZE, BOLDNESS, chars)]
     for fontsize in [5, 10, 15, 20, 30, 45, 60, 85, 100]:
         font_maps.append(get_font_maps(fontsize, BOLDNESS, chars))
