@@ -1,3 +1,5 @@
+#!/usr/bin/env python 
+
 # Alex Eidt
 
 import tkinter as tk
@@ -12,11 +14,11 @@ from PIL import Image, ImageTk, ImageFont, ImageDraw
 # Mirror image stream along vertical axis.
 MIRROR = True
 # Video Stream to use.
-STREAM = '<video0>'
+STREAM = "<video0>"
 # Background color of the ASCII stream.
-BACKGROUND_COLOR = 'white'
+BACKGROUND_COLOR = "white"
 # Font color used in the ASCII stream. Make sure there's some contrast between the two.
-FONT_COLOR = 'black'
+FONT_COLOR = "black"
 # Font size to use with colored/grayscaled ASCII.
 FONTSIZE = 12
 # Boldness to use with colored/grayscaled ASCII.
@@ -27,7 +29,7 @@ FACTOR = 1
 CHARS = "@%#*+=-:. "
 
 # Font to use in ASCII Graphics.
-FONT = 'cour.ttf'
+FONT = "cour.ttf"
 
 
 COLOR = 1
@@ -59,16 +61,16 @@ def get_font_maps(fontsize, boldness, chars):
         image = Image.new("RGB", (w, h), (255, 255, 255))
         draw = ImageDraw.Draw(image)
         draw.text(
-            (0, - (fontsize // 6)),
+            (0, -(fontsize // 6)),
             char,
             fill=(0, 0, 0),
             font=font,
-            stroke_width=boldness
+            stroke_width=boldness,
         )
         bitmap = np.array(image)[:, :, 0]
         fonts.append(((255 - bitmap) / 255).astype(np.float32))
 
-    fonts = list(map(lambda x: x[:min(heights), :min(widths)], fonts))
+    fonts = list(map(lambda x: x[: min(heights), : min(widths)], fonts))
     return np.array(sorted(fonts, key=lambda x: x.sum(), reverse=True))
 
 
@@ -78,28 +80,28 @@ def update():
     """
     global COLOR, ASCII, FILTER, BLOCKS, TEXT, MONO
 
-    if keyboard.is_pressed('shift+g'):  # Color/Grayscale Mode.
+    if keyboard.is_pressed("shift+g"):  # Color/Grayscale Mode.
         COLOR = 1
-    elif keyboard.is_pressed('g'):
+    elif keyboard.is_pressed("g"):
         COLOR = 0
-    if keyboard.is_pressed('shift+a'):  # ASCII Mode.
+    if keyboard.is_pressed("shift+a"):  # ASCII Mode.
         ASCII = 0
-    elif keyboard.is_pressed('a'):
+    elif keyboard.is_pressed("a"):
         ASCII = 1
-    if keyboard.is_pressed('shift+t'):  # Text Mode.
+    if keyboard.is_pressed("shift+t"):  # Text Mode.
         TEXT = 0
-    elif keyboard.is_pressed('t'):
+    elif keyboard.is_pressed("t"):
         TEXT = 1
-    if keyboard.is_pressed('shift+m'):  # Monochromatic Mode.
+    if keyboard.is_pressed("shift+m"):  # Monochromatic Mode.
         MONO = 0
-    elif keyboard.is_pressed('m'):
+    elif keyboard.is_pressed("m"):
         MONO = 1
 
-    if keyboard.is_pressed('o'):        # Outline Filter.
+    if keyboard.is_pressed("o"):  # Outline Filter.
         FILTER = 1
-    elif keyboard.is_pressed('s'):      # Sobel Filter.
+    elif keyboard.is_pressed("s"):  # Sobel Filter.
         FILTER = 2
-    elif keyboard.is_pressed('space'):  # No Filter.
+    elif keyboard.is_pressed("space"):  # No Filter.
         FILTER = 0
 
     for i in range(10):
@@ -123,15 +125,15 @@ def convolve(frame, kernel):
     height, width = frame.shape
     kernel_height, kernel_width = kernel.shape
     # assert kh == kw
-    output = np.pad(frame, kernel_height // 2, mode='edge')
+    output = np.pad(frame, kernel_height // 2, mode="edge")
 
     output_shape = kernel.shape + tuple(np.subtract(output.shape, kernel.shape) + 1)
     strides = output.strides + output.strides
 
     return np.einsum(
-        'ij,ijkl->kl',
+        "ij,ijkl->kl",
         kernel,
-        np.lib.stride_tricks.as_strided(output, output_shape, strides)
+        np.lib.stride_tricks.as_strided(output, output_shape, strides),
     )
 
 
@@ -144,16 +146,23 @@ def main():
 
     # Set up window.
     root = tk.Tk()
-    root.title('ASCII Streamer')
+    root.title("ASCII Streamer")
     mainframe = tk.Frame()
-    image_label = tk.Label(mainframe, borderwidth=5, relief='solid')
-    ascii_label = tk.Label(mainframe, font=('courier', 2), fg=FONT_COLOR, bg=BACKGROUND_COLOR, borderwidth=5, relief='solid')
+    image_label = tk.Label(mainframe, borderwidth=5, relief="solid")
+    ascii_label = tk.Label(
+        mainframe,
+        font=("courier", 2),
+        fg=FONT_COLOR,
+        bg=BACKGROUND_COLOR,
+        borderwidth=5,
+        relief="solid",
+    )
     mainframe.pack(side=tk.LEFT, expand=tk.YES, padx=10)
     root.protocol("WM_DELETE_WINDOW", lambda: (video.close(), root.destroy()))
 
     # Get image stream from webcam or other source and begin streaming.
     video = imageio.get_reader(STREAM)
-    w, h = video.get_meta_data()['source_size']
+    w, h = video.get_meta_data()["source_size"]
 
     tiles = tile_tuples(w, h)
 
@@ -170,30 +179,39 @@ def main():
 
         # Resize Image.
         image = image[::size, ::size]
-        if not COLOR or TEXT: # Grayscale Image.
-            image = (image * np.array([0.299, 0.587, 0.114])).sum(axis=2, dtype=np.uint8)
-        if MIRROR: # Mirror Image along vertical axis.
+        if not COLOR or TEXT:  # Grayscale Image.
+            image = (image * np.array([0.299, 0.587, 0.114])).sum(
+                axis=2, dtype=np.uint8
+            )
+        if MIRROR:  # Mirror Image along vertical axis.
             image = image[:, ::-1]
 
         # Tile Image into dw x dh blocks for resized ASCII streams.
         if BLOCKS > 0 and TEXT:
             dw, dh = tiles[min(BLOCKS, len(tiles) - 1)]
-            image = (np.add.reduceat(
-                np.add.reduceat(image.astype(np.int), np.arange(0, h, dh), axis=0),
-                np.arange(0, w, dw),
-                axis=1
-            ) / (dw * dh)).astype(np.uint8)
+            image = (
+                np.add.reduceat(
+                    np.add.reduceat(image.astype(np.int), np.arange(0, h, dh), axis=0),
+                    np.arange(0, w, dw),
+                    axis=1,
+                )
+                / (dw * dh)
+            ).astype(np.uint8)
             h, w = image.shape
 
         # Apply image convolutions to stream.
         if FILTER > 0 and (not COLOR or TEXT):
-            if FILTER == 1:     # Outline Kernel.
-                image = convolve(image, np.array([[-1, -1, -1], [-1, -8, -1], [-1, -1, -1]])).astype(np.uint8)
-            elif FILTER == 2:   # Sobel Kernel.
+            if FILTER == 1:  # Outline Kernel.
+                image = convolve(
+                    image, np.array([[-1, -1, -1], [-1, -8, -1], [-1, -1, -1]])
+                ).astype(np.uint8)
+            elif FILTER == 2:  # Sobel Kernel.
                 gx = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
                 gy = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-                image = np.hypot(convolve(image, gx), convolve(image, gy)).astype(np.uint8)
-        
+                image = np.hypot(convolve(image, gx), convolve(image, gy)).astype(
+                    np.uint8
+                )
+
         if ASCII and not TEXT:
             fh, fw = font_maps[BLOCKS][0].shape
             frame = image[::fh, ::fw]
@@ -203,7 +221,9 @@ def main():
                 colors = np.repeat(np.repeat(255 - frame, fw, axis=1), fh, axis=0)
 
             if COLOR:
-                grayscaled = (frame * np.array([3, 4, 1])).sum(axis=2, dtype=np.uint32).ravel()
+                grayscaled = (
+                    (frame * np.array([3, 4, 1])).sum(axis=2, dtype=np.uint32).ravel()
+                )
             else:
                 grayscaled = frame.ravel().astype(np.uint32)
 
@@ -215,16 +235,18 @@ def main():
             image = font_maps[BLOCKS][grayscaled]
             image = image.reshape((nh, nw, fh, fw)).transpose(0, 2, 1, 3).ravel()
             if COLOR:
-                image = np.tile(image, 3).reshape((3, nh * fh, nw * fw)).transpose(1, 2, 0)
+                image = (
+                    np.tile(image, 3).reshape((3, nh * fh, nw * fw)).transpose(1, 2, 0)
+                )
             else:
                 image = image.reshape((nh * fh, nw * fw))
             if MONO:
-                ne.evaluate('255 - (image * 255)', out=image)
+                ne.evaluate("255 - (image * 255)", out=image)
                 image = image.astype(np.uint8)
             else:
                 image = image[:h, :w]
                 colors = colors[:h, :w]
-                image = ne.evaluate('255 - image * colors').astype(np.uint8)
+                image = ne.evaluate("255 - image * colors").astype(np.uint8)
 
         # If ASCII mode is on convert frame to ascii and display, otherwise display video stream.
         if TEXT:
@@ -236,8 +258,8 @@ def main():
             ascii_label.pack()
             # Update label with new ASCII image.
             ascii_label.config(
-                text='\n'.join(''.join(x) for x in chars[image]),
-                font=('courier', (BLOCKS * 4) + 2)
+                text="\n".join("".join(x) for x in chars[image]),
+                font=("courier", (BLOCKS * 4) + 2),
             )
             ascii_label.after(1, stream)
         else:
@@ -248,11 +270,10 @@ def main():
             image_label.image = frame_image
             image_label.after(1, stream)
 
-
     stream()
-    root.state('zoomed')
+    root.state("zoomed")
     root.mainloop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
