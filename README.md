@@ -12,7 +12,6 @@ Check out the [ASCII-Video](https://github.com/AlexEidt/ASCII-Video) Repository 
 
 Key | Description
 --- | ---
-`G` | Toggle Grayscale and Color Mode
 `A` | Toggle ASCII Mode
 `T` | Toggle Text Mode
 `O` | Apply Outline Convolution Kernel

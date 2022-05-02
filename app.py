@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 
 # Alex Eidt
 
@@ -32,7 +32,6 @@ CHARS = "@%#*+=-:. "
 FONT = "cour.ttf"
 
 
-COLOR = 1
 ASCII = 0
 FILTER = 0
 BLOCKS = 0
@@ -67,8 +66,8 @@ def get_font_maps(fontsize, boldness, chars):
             font=font,
             stroke_width=boldness,
         )
-        bitmap = np.array(image)[:, :, 0]
-        fonts.append(((255 - bitmap) / 255).astype(np.float32))
+        bitmap = np.array(image, dtype=np.uint8)
+        fonts.append(255 - bitmap)
 
     fonts = list(map(lambda x: x[: min(heights), : min(widths)], fonts))
     return np.array(sorted(fonts, key=lambda x: x.sum(), reverse=True))
@@ -78,12 +77,8 @@ def update():
     """
     Update settings based on user input.
     """
-    global COLOR, ASCII, FILTER, BLOCKS, TEXT, MONO
+    global ASCII, FILTER, BLOCKS, TEXT, MONO
 
-    if keyboard.is_pressed("shift+g"):  # Color/Grayscale Mode.
-        COLOR = 1
-    elif keyboard.is_pressed("g"):
-        COLOR = 0
     if keyboard.is_pressed("shift+a"):  # ASCII Mode.
         ASCII = 0
     elif keyboard.is_pressed("a"):
@@ -179,7 +174,7 @@ def main():
 
         # Resize Image.
         image = image[::size, ::size]
-        if not COLOR or TEXT:  # Grayscale Image.
+        if TEXT:  # Grayscale Image.
             image = (image * np.array([0.299, 0.587, 0.114])).sum(
                 axis=2, dtype=np.uint8
             )
@@ -191,7 +186,7 @@ def main():
             dw, dh = tiles[min(BLOCKS, len(tiles) - 1)]
             image = (
                 np.add.reduceat(
-                    np.add.reduceat(image.astype(np.int), np.arange(0, h, dh), axis=0),
+                    np.add.reduceat(image.astype(np.uint32), np.arange(0, h, dh), axis=0),
                     np.arange(0, w, dw),
                     axis=1,
                 )
@@ -200,7 +195,7 @@ def main():
             h, w = image.shape
 
         # Apply image convolutions to stream.
-        if FILTER > 0 and (not COLOR or TEXT):
+        if FILTER > 0 and TEXT:
             if FILTER == 1:  # Outline Kernel.
                 image = convolve(
                     image, np.array([[-1, -1, -1], [-1, -8, -1], [-1, -1, -1]])
@@ -213,40 +208,35 @@ def main():
                 )
 
         if ASCII and not TEXT:
-            fh, fw = font_maps[BLOCKS][0].shape
+            fh, fw = font_maps[BLOCKS][0].shape[:2]
             frame = image[::fh, ::fw]
             nh, nw = frame.shape[:2]
 
             if not MONO:
-                colors = np.repeat(np.repeat(255 - frame, fw, axis=1), fh, axis=0)
+                colors = (255 - frame).repeat(fw, 1).repeat(fh, 0)
 
-            if COLOR:
-                grayscaled = (
-                    (frame * np.array([3, 4, 1])).sum(axis=2, dtype=np.uint32).ravel()
-                )
-            else:
-                grayscaled = frame.ravel().astype(np.uint32)
+            grayscaled = (
+                (frame * np.array([3, 4, 1])).sum(axis=2, dtype=np.uint32).ravel()
+            )
 
             grayscaled *= len(chars)
-            grayscaled >>= 11 if COLOR else 8
+            grayscaled >>= 11
 
             # Create a new list with each font bitmap based on the grayscale value
-            grayscaled = grayscaled[range(len(grayscaled))]
-            image = font_maps[BLOCKS][grayscaled]
-            image = image.reshape((nh, nw, fh, fw)).transpose(0, 2, 1, 3).ravel()
-            if COLOR:
-                image = (
-                    np.tile(image, 3).reshape((3, nh * fh, nw * fw)).transpose(1, 2, 0)
-                )
-            else:
-                image = image.reshape((nh * fh, nw * fw))
+            image = (
+                font_maps[BLOCKS][grayscaled]
+                .reshape((nh, nw, fh, fw, 3))
+                .transpose(0, 2, 1, 3, 4)
+                .ravel()
+                .reshape((nh * fh, nw * fw, 3))
+            )
             if MONO:
-                ne.evaluate("255 - (image * 255)", out=image)
+                ne.evaluate("255 - image", out=image, casting="unsafe")
                 image = image.astype(np.uint8)
             else:
                 image = image[:h, :w]
-                colors = colors[:h, :w]
-                image = ne.evaluate("255 - image * colors").astype(np.uint8)
+                colors = colors[:h, :w].astype(np.uint16)
+                image = (255 - (image * colors) // 255).astype(np.uint8)
 
         # If ASCII mode is on convert frame to ascii and display, otherwise display video stream.
         if TEXT:
